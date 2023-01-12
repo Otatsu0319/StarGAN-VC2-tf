@@ -48,8 +48,8 @@ class StarGAN_VC2():
             self.test_step_func = tf.function(self.test_step)
         
         with self.distribute_strategy.scope():
-            # self.generator = models.build_generator(args.mcep_size, args.dataset_t_length, args.code_size)
-            self.generator = models.Generator(args.code_size)
+            self.generator = models.build_generator(args.mcep_size, args.dataset_t_length, args.code_size)
+            # self.generator = models.Generator(args.code_size)
             self.discriminator = models.build_discriminator(args.mcep_size, args.crop_size, args.code_size*2)
 
             self.bc = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.NONE, from_logits=True)

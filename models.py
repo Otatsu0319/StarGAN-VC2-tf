@@ -22,7 +22,10 @@ def build_generator(mcep_size, t_length, code_size):
 
 
     # 2D -> 1D
-    x = tf.keras.layers.Reshape((t_length//4, 2304))(x_ds)
+    x = tf.keras.layers.Permute((3, 1, 2))(x_ds)
+    x = tf.keras.layers.Reshape((2304, 1, t_length//4))(x)
+    x = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, [2]))(x)
+    x = tf.keras.layers.Permute((2, 1))(x)
     x = tf.keras.layers.Conv1D(256, kernel_size = 1, strides = 1, padding="same")(x)
     x_1d = tfa.layers.InstanceNormalization()(x)
 
@@ -34,7 +37,10 @@ def build_generator(mcep_size, t_length, code_size):
 
     # 1D -> 2D
     x = tf.keras.layers.Conv1D(2304, kernel_size = 1, strides = 1, padding="same")(x_1d)
-    x_2d = tf.keras.layers.Reshape((9, t_length//4, 256))(x)
+
+    x = tf.keras.layers.Permute((2, 1))(x)
+    x = tf.keras.layers.Reshape((256, 9, t_length//4))(x)
+    x_2d = tf.keras.layers.Permute((2, 3, 1))(x_ds)
 
     # Upsample (2D)
 
@@ -46,9 +52,10 @@ def build_generator(mcep_size, t_length, code_size):
     x = modules.PixelShuffler(r = 2)(x)
     x_2d = modules.GLU()(x)
 
-    x = tf.keras.layers.Conv2D(35, kernel_size = (5, 15), strides = (1, 1), padding="same")(x_2d)
+    x = tf.keras.layers.Conv2D(36, kernel_size = (5, 15), strides = (1, 1), padding="same")(x_2d)
     x = modules.HightMean()(x)
-    outputs = tf.keras.layers.Reshape((35, t_length, -1))(x)
+    outputs = tf.keras.layers.Reshape((36, t_length, -1))(x)
+    outputs = tf.keras.layers.Conv2D(1, kernel_size = 7, strides = (1, 1), padding="same")(outputs)
     outputs = tf.keras.layers.Activation("linear", dtype="float32")(outputs)
 
     return tf.keras.Model(inputs=[inputs, codes], outputs=outputs)
@@ -257,17 +264,19 @@ def build_discriminator(mcep_size, crop_size, code_size):
     return tf.keras.Model(inputs=[inputs, codes], outputs=outputs)
    
 if __name__ == "__main__":
-    generator = Generator(8)
-    discriminator = build_discriminator(35, 128, 8*2)
-    mcep = tf.random.uniform((4, 35, 444, 1))
+    # generator = Generator(8)
+    generator = build_generator(36, 128, 8)
+    discriminator = build_discriminator(36, 128, 8*2)
+    mcep = tf.random.uniform((4, 36, 128, 1))
     code = tf.random.uniform((4, 8))
     gen_mcep = generator((mcep, code))
     print(tf.keras.backend.int_shape(gen_mcep))
 
-    mcep = tf.random.uniform((4, 35, 128, 1))
+    mcep = tf.random.uniform((4, 36, 128, 1))
     code_2 = tf.random.uniform((4, 8))
     env_code = tf.concat((code, code_2), 1)
     y_real = discriminator((mcep, env_code), training=False)
     print(tf.keras.backend.int_shape(y_real))
 
     print(generator.summary())
+    print(discriminator.summary())

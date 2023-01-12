@@ -25,8 +25,8 @@ class Args:
 
         self.repeat_num = 1
         self.iterations = 3*(10**5) // self.repeat_num
-        self.train_batch_size = 128
-        self.test_batch_size = 512
+        self.train_batch_size = 8
+        self.test_batch_size = 16
         self.logging_interval = 1000 // self.repeat_num
         self.sample_interval = 5000 // self.repeat_num
         self.checkpoint_interval = 1000 // self.repeat_num
@@ -44,7 +44,7 @@ class Args:
         self.model_name = "stargan_vc2"
 
         self.tensorboard_log_dir = "logs"
-        self.save_profile = False
+        self.save_profile = True
 
         self.restore_bool = False
         if self.restore_bool:
